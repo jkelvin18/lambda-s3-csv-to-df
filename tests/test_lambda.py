@@ -1,6 +1,4 @@
 import boto3
-import pandas as pd
-import datetime
 import pytest
 from moto import mock_s3
 
