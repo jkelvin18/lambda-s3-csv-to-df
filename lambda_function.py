@@ -27,7 +27,7 @@ def lambda_handler(event, context):
 
     try:
         # Get the most recent matching object
-        from app.lambda_function import get_latest_matching_object
+        from src.manage_data import get_latest_matching_object
         latest_obj_key = get_latest_matching_object
         (s3_client, bucket, prefix, substr)
 
@@ -35,7 +35,7 @@ def lambda_handler(event, context):
         obj = s3_client.get_object(Bucket=bucket, Key=latest_obj_key)
         df = pd.read_csv(obj['Body'], names=schema)
 
-        from app.lambda_function import load_data
+        from src.manage_data import load_data
         load_data(df, pathoutput, table, database, partitions_cols)
 
         return "Success"
