@@ -3,28 +3,11 @@ import pandas as pd
 import datetime
 
 
-def get_latest_matching_object(s3_client, bucket, prefix, substr):
-    """
-    Gets the S3 object that matches the given prefix
-    and contains the given substring in the name.
-    Returns the object key (name) of the most recent object
-    that matches the prefix and substring.
-    """
-    objects = s3_client.\
-        list_objects_v2(Bucket=bucket, Prefix=prefix)['Contents']
-    filtered_objects = [obj for obj in objects if substr in obj['Key']]
-    if not filtered_objects:
-        raise ValueError(f"No objects found with prefix {prefix} \
-            and substring {substr}")
-    latest_obj = max(filtered_objects, key=lambda obj: obj['LastModified'])
-    return latest_obj['Key']
-
-
 def lambda_handler(event, context):
     # S3 bucket and object key
     bucket = 'your-bucket-name'
-    yesterday = (datetime.datetime.today() - datetime.timedelta(days=1)).\
-        strftime('%Y%m%d')
+    yesterday = (datetime.datetime.today() - datetime.timedelta(days=1))\
+        .strftime('%Y%m%d')
     prefix = f'{yesterday}/'
     substr = 'your-substring'
     schema = {
@@ -34,12 +17,17 @@ def lambda_handler(event, context):
         "column4": "date",
         "column5": "datetime"
     }
+    pathoutput = "s3://bucket-name/tb-name"
+    table = "tb_name"
+    database = "db_name"
+    partitions_cols = "anomesdia"
 
     # S3 client
     s3_client = boto3.client('s3')
 
     try:
         # Get the most recent matching object
+        from app.lambda_function import get_latest_matching_object
         latest_obj_key = get_latest_matching_object
         (s3_client, bucket, prefix, substr)
 
@@ -47,7 +35,10 @@ def lambda_handler(event, context):
         obj = s3_client.get_object(Bucket=bucket, Key=latest_obj_key)
         df = pd.read_csv(obj['Body'], names=schema)
 
-        return df.to_dict()
+        from app.lambda_function import load_data
+        load_data(df, pathoutput, table, database, partitions_cols)
+
+        return "Success"
 
     except Exception as e:
         # Log the error and return a message to the caller
