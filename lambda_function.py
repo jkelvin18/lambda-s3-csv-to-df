@@ -1,13 +1,31 @@
 import boto3
 import pandas as pd
 import datetime
+import logging
+from src.manage_data import get_latest_matching_object, load_data
+
+# Set up logging
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
 
 
 def lambda_handler(event, context):
-    # S3 bucket and object key
+    """
+    Lambda function to read the most recent S3 object that matches a given
+    prefix and contains a given substring in the name, read its contents into
+    a Pandas dataframe, and save it to S3 as a Parquet file.
+    """
+    # Get input parameters from event
+    # bucket = event['bucket']
+    # substr = event['substr']
+    # schema = event['schema']
+    # pathoutput = event['pathoutput']
+    # table = event['table']
+    # database = event['database']
+    # partitions_cols = event['partitions_cols'
     bucket = 'your-bucket-name'
-    yesterday = (datetime.datetime.today() - datetime.timedelta(days=1))\
-        .strftime('%Y%m%d')
+    yesterday = (datetime.datetime.today() - datetime.timedelta(days=1)
+                 ).strftime('%Y%m%d')
     prefix = f'{yesterday}/'
     substr = 'your-substring'
     schema = {
@@ -27,20 +45,28 @@ def lambda_handler(event, context):
 
     try:
         # Get the most recent matching object
-        from src.manage_data import get_latest_matching_object
-        latest_obj_key = get_latest_matching_object
-        (s3_client, bucket, prefix, substr)
+        logger.info(f"Getting the latest matching object from \
+                    {bucket}/{prefix}")
+        latest_obj_key = get_latest_matching_object(s3_client,
+                                                    bucket,
+                                                    prefix,
+                                                    substr)
 
         # Read the object contents into a Pandas dataframe with schema
         obj = s3_client.get_object(Bucket=bucket, Key=latest_obj_key)
-        df = pd.read_csv(obj['Body'], names=schema)
+        df = pd.read_csv(obj['Body'],
+                         names=schema,
+                         delimiter=";",
+                         skiprows=1)
 
-        from src.manage_data import load_data
+        # Load data to S3 and Glue catalog
+        logger.info("Loading data to S3 and Glue catalog")
         load_data(df, pathoutput, table, database, partitions_cols)
 
+        logger.info("Lambda function execution completed successfully")
         return "Success"
 
     except Exception as e:
         # Log the error and return a message to the caller
-        print(f"An error occurred: {e}")
+        logger.error(f"An error occurred: {e}")
         return {"errorMessage": str(e)}

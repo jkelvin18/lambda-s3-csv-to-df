@@ -1,0 +1,15 @@
+{
+  "bucket": "your-bucket-name",
+  "substr": "your-substring",
+  "schema": {
+    "column1": "string",
+    "column2": "int",
+    "column3": "float",
+    "column4": "date",
+    "column5": "datetime"
+  },
+  "pathoutput": "s3://bucket-name/tb-name",
+  "table": "tb_name",
+  "database": "db_name",
+  "partitions_cols": "anomesdia"
+}
