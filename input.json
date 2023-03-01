@@ -1,4 +1,20 @@
 {
+  "bucket_dstn": "your-dstn-name-1",
+  "bucket_src": "your-dstn-name-1",
+  "substr": "your-substring",
+  "schema": {
+    "column1": "string-1",
+    "column2": "int-1",
+    "column3": "float-1",
+    "column4": "date-1",
+    "column5": "datetime-1"
+  },
+  "pathoutput": "s3://bucket-name/tb-name-1",
+  "table": "tb_name-1",
+  "database": "db_name-1",
+  "partitions_cols": "anomesdia"
+}
+{
   "bucket": "your-bucket-name",
   "substr": "your-substring",
   "schema": {
@@ -11,5 +27,20 @@
   "pathoutput": "s3://bucket-name/tb-name",
   "table": "tb_name",
   "database": "db_name",
+  "partitions_cols": "anomesdia"
+}
+{
+  "bucket": "your-bucket-name-3",
+  "substr": "your-substring-3",
+  "schema": {
+    "column1": "string-3",
+    "column2": "int-3",
+    "column3": "float-3",
+    "column4": "date-3",
+    "column5": "datetime-3"
+  },
+  "pathoutput": "s3://bucket-name/tb-name-3",
+  "table": "tb_name-3",
+  "database": "db_name-3",
   "partitions_cols": "anomesdia"
 }

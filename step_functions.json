@@ -1,110 +1,34 @@
+
 {
-  "Comment": "Parallel execution of 2 Lambda functions",
+  "Comment": "Run AWS Lambda function in parallel for each item in the input JSON",
   "StartAt": "ParallelExecution",
   "States": {
     "ParallelExecution": {
-      "Type": "Parallel",
-      "End": true,
-      "Branches": [
-        {
-          "StartAt": "Lambda1",
-          "States": {
-            "Lambda1": {
-              "Type": "Task",
-              "Resource": "arn:aws:states:::lambda:invoke",
-              "Parameters": {
-                "FunctionName": "lambda_function_name_1",
-                "Payload": {
-                  "bucket.$": "$.bucket",
-                  "substr.$": "$.substr",
-                  "schema.$": "$.schema",
-                  "pathoutput.$": "$.pathoutput",
-                  "database.$": "$.database",
-                  "table.$": "$.table",
-                  "partitions_cols.$": "$.partitions_cols"
-                }
-              },
-              "Retry": [
-                {
-                  "ErrorEquals": [
-                    "Lambda.ServiceException",
-                    "Lambda.SdkClientException"
-                  ],
-                  "IntervalSeconds": 2,
-                  "MaxAttempts": 6,
-                  "BackoffRate": 2
-                }
-              ],
-              "Catch": [
-                {
-                  "ErrorEquals": [
-                    "States.ALL"
-                  ],
-                  "Next": "Lambda1Fallback"
-                }
-              ],
-              "Next": "Lambda1Complete"
-            },
-            "Lambda1Complete": {
-              "Type": "Pass",
-              "End": true
-            },
-            "Lambda1Fallback": {
-              "Type": "Pass",
-              "End": true
-            }
-          }
-        },
-        {
-          "StartAt": "Lambda2",
-          "States": {
-            "Lambda2": {
-              "Type": "Task",
-              "Resource": "arn:aws:states:::lambda:invoke",
-              "Parameters": {
-                "FunctionName": "lambda_function_name_2",
-                "Payload": {
-                  "bucket.$": "$.bucket",
-                  "substr.$": "$.substr",
-                  "schema.$": "$.schema",
-                  "pathoutput.$": "$.pathoutput",
-                  "database.$": "$.database",
-                  "table.$": "$.table",
-                  "partitions_cols.$": "$.partitions_cols"
-                }
-              },
-              "Retry": [
-                {
-                  "ErrorEquals": [
-                    "Lambda.ServiceException",                    
-                    "Lambda.SdkClientException"
-                  ],
-                  "IntervalSeconds": 2,
-                  "MaxAttempts": 6,
-                  "BackoffRate": 2
-                }
-              ],
-              "Catch": [
-                {
-                  "ErrorEquals": [
-                    "States.ALL"
-                  ],
-                  "Next": "Lambda2Fallback"
-                }
-              ],
-              "Next": "Lambda2Complete"
-            },
-            "Lambda2Complete": {
-              "Type": "Pass",
-              "End": true
-            },
-            "Lambda2Fallback": {
-              "Type": "Pass",
-              "End": true
-            }
+      "Type": "Map",
+      "MaxConcurrency": 10,
+      "Iterator": {
+        "StartAt": "ExecuteLambda",
+        "States": {
+          "ExecuteLambda": {
+            "Type": "Task",
+            "Resource": "arn:aws:lambda:your-region:your-account-id:function:your-lambda-function-name",
+            "InputPath": "$",
+            "OutputPath": "$",
+            "Catch": [
+              {
+                "ErrorEquals": [ "States.ALL" ],
+                "Next": "HandleError"
+              }
+            ],
+            "End": true
+          },
+          "HandleError": {
+            "Type": "Pass",
+            "End": true
           }
         }
-      ]
+      },
+      "End": true
     }
   }
 }
