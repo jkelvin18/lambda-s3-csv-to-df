@@ -15,15 +15,8 @@ def lambda_handler(event, context):
     prefix and contains a given substring in the name, read its contents into
     a Pandas dataframe, and save it to S3 as a Parquet file.
     """
-    # Get input parameters from event
-    # bucket = event['bucket']
-    # substr = event['substr']
-    # schema = event['schema']
-    # pathoutput = event['pathoutput']
-    # table = event['table']
-    # database = event['database']
-    # partitions_cols = event['partitions_cols'
-    bucket = 'your-bucket-name'
+    bucket_dtsn = 'your-bucket_dtsn-name'
+    bucket_src = 'your-bucket_src-name'
     yesterday = (datetime.datetime.today() - datetime.timedelta(days=1)
                  ).strftime('%Y%m%d')
     prefix = f'{yesterday}/'
@@ -46,14 +39,14 @@ def lambda_handler(event, context):
     try:
         # Get the most recent matching object
         logger.info(f"Getting the latest matching object from \
-                    {bucket}/{prefix}")
+                    {bucket_dtsn}/{prefix}")
         latest_obj_key = get_latest_matching_object(s3_client,
-                                                    bucket,
+                                                    bucket_dtsn,
                                                     prefix,
                                                     substr)
 
         # Read the object contents into a Pandas dataframe with schema
-        obj = s3_client.get_object(Bucket=bucket, Key=latest_obj_key)
+        obj = s3_client.get_object(Bucket=bucket_dtsn, Key=latest_obj_key)
         df = pd.read_csv(obj['Body'],
                          names=schema,
                          delimiter=";",
@@ -61,7 +54,7 @@ def lambda_handler(event, context):
 
         # Load data to S3 and Glue catalog
         logger.info("Loading data to S3 and Glue catalog")
-        load_data(df, pathoutput, table, database, partitions_cols)
+        load_data(df, pathoutput, table, database, partitions_cols, bucket_src)
 
         logger.info("Lambda function execution completed successfully")
         return "Success"

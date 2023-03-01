@@ -1,12 +1,17 @@
+import boto3
 import logging
 import awswrangler as wr
+from botocore.exceptions import ClientError
 
 # Set up logger
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 
-def get_latest_matching_object(s3_client, bucket, prefix, substr):
+def get_latest_matching_object(s3_client,
+                               bucket,
+                               prefix,
+                               substr):
     """
     Gets the S3 object that matches the given prefix and contains the given
     substring in the name. Returns the object key (name) of the most recent
@@ -51,7 +56,13 @@ def get_latest_matching_object(s3_client, bucket, prefix, substr):
     return latest_obj['Key']
 
 
-def load_data(df, pathoutput, table, database, partitions_cols):
+def load_data(df,
+              pathoutput,
+              table,
+              database,
+              yesterday,
+              partitions_cols,
+              bucket_src):
     """
     Save the extracted data to S3 as a Parquet file
 
@@ -60,7 +71,9 @@ def load_data(df, pathoutput, table, database, partitions_cols):
         pathoutput (str): The path to save the data in S3
         table (str): table name
         database (str): database name
+        yesterday (str): The name of the partition that will be recorded
         partitions_cols(str): partition column name
+        bucket_src (str): The name of the source bucket
 
     Returns:
         None
@@ -68,6 +81,26 @@ def load_data(df, pathoutput, table, database, partitions_cols):
     Raises:
         ValueError: if there is an error saving data
     """
+
+    # Get S3 client
+    s3_client = boto3.client('s3')
+
+    # Remove existing partition if exists
+    partition_path = f"{pathoutput}/{partitions_cols}={yesterday}"
+    try:
+        response = s3_client.list_objects_v2(Bucket=bucket_src,
+                                             Prefix=partition_path)
+        if response['KeyCount'] > 0:
+            objects = response['Contents']
+            delete_keys = {'Objects': [{'Key': obj['Key']} for obj in objects]}
+            s3_client.delete_objects(Bucket=bucket_src, Delete=delete_keys)
+    except ClientError as e:
+        logger.error(f"Error occurred while removing existing partition \
+                      {partition_path}: {e}")
+        raise ValueError(f"Error occurred while removing existing partition \
+                          {partition_path}: {e}")
+
+    # Save the new partition
     try:
         wr.s3.to_parquet(
             df=df,
@@ -77,10 +110,12 @@ def load_data(df, pathoutput, table, database, partitions_cols):
             compression="snappy",
             dataset=True,
             partition_cols=[partitions_cols],
+            boto3_session=boto3.Session(),
+            mode="overwrite_partitions"
         )
     except Exception as e:
         # Log error and raise exception
-        logger.error(f"Error occurred while saving data to \
+        logger.error(f"Error occurred while saving data to\
                      {pathoutput}: {e}")
-        raise ValueError(f"Error occurred while saving data to \
+        raise ValueError(f"Error occurred while saving data to\
                          {pathoutput}: {e}")
