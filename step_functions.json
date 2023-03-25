@@ -1,34 +1,78 @@
-
 {
-  "Comment": "Run AWS Lambda function in parallel for each item in the input JSON",
-  "StartAt": "ParallelExecution",
-  "States": {
-    "ParallelExecution": {
-      "Type": "Map",
-      "MaxConcurrency": 10,
-      "Iterator": {
-        "StartAt": "ExecuteLambda",
-        "States": {
-          "ExecuteLambda": {
-            "Type": "Task",
-            "Resource": "arn:aws:lambda:your-region:your-account-id:function:your-lambda-function-name",
-            "InputPath": "$",
-            "OutputPath": "$",
-            "Catch": [
-              {
-                "ErrorEquals": [ "States.ALL" ],
-                "Next": "HandleError"
-              }
-            ],
-            "End": true
-          },
-          "HandleError": {
-            "Type": "Pass",
-            "End": true
-          }
-        }
-      },
-      "End": true
-    }
+	"Comment": "Run AWS Lambda function in parallel for each item in the input JSON",
+	"StartAt": "Pass",
+	"States": {
+	  "Pass": {
+		"Type": "Pass",
+		"Next": "ParallelExecution",
+		"Result": {
+		  "tabs": [
+			{
+			  "bucket_dstn": "bucket_dstn",
+			  "bucket_src": "bucket_src",
+			  "substr": "xxxyyy",
+			  "schema": {
+				"col_0": "int",
+				"col_1": "string"
+			  },
+			  "pathoutput": "s3://bucket_dstn/tb_1",
+			  "table": "tb_1",
+			  "database": "db_1",
+			  "partitions_cols": "col_0",
+			  "data_ref": "20230308"
+			},
+			{
+			  "bucket_dstn": "bucket_dstn_2",
+			  "bucket_src": "bucket_src_2",
+			  "substr": "yyyxxx",
+			  "schema": {
+				"col_0": "int",
+				"col_1": "string"
+			  },
+			  "pathoutput": "s3://bucket_dstn_2/tb_2",
+			  "table": "tb_2",
+			  "database": "db_2",
+			  "partitions_cols": "col_1",
+			  "data_ref": ""
+			}
+		  ]
+		}
+	  },
+	  "ParallelExecution": {
+		"Type": "Map",
+		"ItemsPath": "$.tabs",
+		"Next": "Final State",
+		"MaxConcurrency": 1,
+		"Iterator": {
+		  "StartAt": "ExecuteLambda",
+		  "States": {
+			"ExecuteLambda": {
+			  "Type": "Task",
+			  "Resource": "arn:aws:lambda:sa-east-1:account_id:function:lambdaname",
+			  "InputPath": "$",
+			  "OutputPath": "$",
+			  "Catch": [
+				{
+				  "ErrorEquals": [
+					"States.TaskFailed"
+				  ],
+				  "Next": "handle mapper error",
+				  "ResultPath": "$.error"
+				}
+			  ],
+			  "ResultPath": "$.success",
+			  "End": true
+			},
+			"handle mapper error": {
+			  "Type": "Pass",
+			  "End": true
+			}
+		  }
+		}
+	  },
+	  "Final State": {
+		"Type": "Pass",
+		"End": true
+	  }
+	}
   }
-}
